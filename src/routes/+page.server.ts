@@ -18,6 +18,21 @@ export const load: PageServerLoad = async () => {
 	const upstashRedisRestUrl = env.UPSTASH_REDIS_REST_URL ?? '(not set)';
 	const databaseUrl = env.DATABASE_URL ?? '(not set)';
 
+	// Mask Vercel domain values to hide team/org identifiers
+	const maskDomain = (value: string): string => {
+		if (!value) return '';
+		// e.g. "demo-app-abc123-teamname.vercel.app" → "demo-app-***.vercel.app"
+		const parts = value.split('.');
+		if (parts.length >= 3 && parts[parts.length - 2] === 'vercel') {
+			const subdomain = parts[0];
+			const firstDash = subdomain.indexOf('-');
+			const prefix = firstDash > 0 ? subdomain.substring(0, Math.min(firstDash + 4, 12)) : subdomain.substring(0, 8);
+			return `${prefix}***.vercel.app`;
+		}
+		if (value.length <= 12) return value;
+		return value.substring(0, 8) + '***';
+	};
+
 	// Mask URL values to avoid exposing project identifiers
 	const maskUrl = (value: string): string => {
 		if (value === '(not set)') return value;
@@ -44,9 +59,9 @@ export const load: PageServerLoad = async () => {
 	return {
 		system: {
 			vercelEnv,
-			vercelUrl,
-			vercelBranchUrl,
-			vercelProjectProductionUrl,
+			vercelUrl: maskDomain(vercelUrl),
+			vercelBranchUrl: maskDomain(vercelBranchUrl),
+			vercelProjectProductionUrl: maskDomain(vercelProjectProductionUrl),
 			vercelRegion,
 			vercelDeploymentId: maskValue(vercelDeploymentId),
 			vercelGitCommitRef,
